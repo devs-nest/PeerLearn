@@ -1,0 +1,17 @@
+version: "3"
+services:
+  bot_main:
+    image: prachipathrayan/peerlearn
+    restart: unless-stopped
+    container_name: peerlearn_main
+    env_file:
+      - ".env"
+    command: python3 main.py
+
+  bot_sqs:
+    image: prachipathrayan/peerlearn
+    restart: unless-stopped
+    container_name: peerlearn_sqs
+    env_file:
+      - ".env"
+    command: python3 main.py --sqs
