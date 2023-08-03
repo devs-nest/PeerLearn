@@ -18,13 +18,12 @@ from utils.exception import BadRequest
 
 # Send greeting msg to new user and post user details in DB
 async def new_member_joined(member):
-    user_email = "temp@gmail.com"  # temporarily
-    resp = await submit_user_details(member, user_email)
+    resp = await submit_user_details(member)
     return resp
 
 
 # Post user details in database
-async def submit_user_details(member, user_email=None):
+async def submit_user_details(member):
     name = re.sub("[^\\-a-zA-Z0-9 @#$&._-]", "_", member.name)
     display_name = re.sub("[^\\-a-zA-Z0-9. @#$&_-]", "_", member.display_name)
     password = get_password()
@@ -32,7 +31,7 @@ async def submit_user_details(member, user_email=None):
     payload = {
         "data": {
             "attributes": {
-                "email": f"{str(member.id)}@gmail.com",
+                "email": f"{member.name}_{str(member.id)[:4]}@discord.com",
                 "name": display_name,
                 "discord_username": display_name,
                 "discord_id": str(member.id),
@@ -58,9 +57,6 @@ def get_password():
     for i in range(10):
         pwd = pwd + str(random.randrange(10))
     return pwd
-
-
-# Update user status in database
 
 
 async def assign_server(member, active=True):
@@ -118,6 +114,7 @@ async def check_scrum_details(channel, role_name):
         "data": {
             "attributes": {
                 "group_name": role_name,
+                "server_id": channel.guild.id
             },
             "type": "groups",
         }
@@ -176,6 +173,7 @@ async def check_group_details(message, role_name):
         "data": {
             "attributes": {
                 "group_name": role_name,
+                "server_id": message.guild.id
             },
             "type": "groups",
         }
@@ -217,7 +215,8 @@ async def check_user_details(message, discord_id, show_mail=False):
     payload = {
         "data": {
             "attributes": {
-                "discord_ids": [discord_id],
+                "discord_id": discord_id,
+                "server_id":message.guild.id
             },
             "type": "users",
         }

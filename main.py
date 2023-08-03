@@ -54,7 +54,7 @@ async def on_ready():
 async def on_member_remove(member):
     try:
         infoLogger.info(
-            f"User has left the server with userid : {member.id} and username : {member.display_name}")
+            f"User has left the server with user_id : {member.id} and username : {member.display_name}")
         await assign_server(member, False)
         infoLogger.info("User status successfully updated")
     except Exception as e:
@@ -63,6 +63,10 @@ async def on_member_remove(member):
 
 @client.event
 async def on_message(message):
+
+    # TODO: Get user_details when user .info @user
+    # TODO: Get group_details when group .info @group
+    # TODO: Get Scrum_details when .scrum_info @group
     if message.content.startswith("dn-"):
         await client.process_commands(message)
     elif message.content.startswith(".info") and message.role_mentions:
@@ -121,10 +125,13 @@ async def on_member_join(member):
     infoLogger.info(
         f"{member.display_name} has joined {member.guild.name} id({member.id})")
     try:
+        # Register user in to DB
         await new_member_joined(member)
-        infoLogger.info(f"{member.name} added to DB ")
-        await give_user_roles(member)
+        # Assign server
         await assign_server(member)
+        infoLogger.info(f"{member.name} added to DB ")
+        # Give user Roles
+        await give_user_roles(member)
     except Exception as e:
         errorLogger.error(f"Error while updating user status ERROR: {e}")
 
@@ -132,11 +139,5 @@ async def on_member_join(member):
 for filename in os.listdir("./cogs"):
     if filename.endswith(".py"):
         client.load_extension(f"cogs.{filename[:-3]}")
-
-args = sys.argv[1:]
-
-for i in args:
-    if i in "--sqs":
-        shoot_sqs(client)
 
 client.run(CONFIG["BOT_TOKEN"])
