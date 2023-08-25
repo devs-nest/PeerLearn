@@ -1,3 +1,4 @@
+import datetime
 import os
 import re
 import sys
@@ -7,17 +8,11 @@ import sentry_sdk
 
 from client import client
 from logger import errorLogger, infoLogger
-from services.user import (
-    assign_server,
-    check_group_details,
-    check_user_details,
-    give_user_roles,
-    new_member_joined,
-    check_scrum_details,
-)
 from utils.config import CONFIG
 from utils.embeds import Embeds
 from utils.sqs import shoot_sqs
+from api.request import send_request
+from api.endpoints import API_ENDPOINTS
 
 sentry_sdk.init(CONFIG["SENTRY_URL"], traces_sample_rate=0.9)
 
@@ -49,95 +44,67 @@ async def on_ready():
 # async def on_member_update(memberBefore, memberAfter):
 #     # TODO : Reset Roles from Backend
 
-
 @client.event
-async def on_member_remove(member):
+async def on_guild_join(guild):
     try:
-        infoLogger.info(
-            f"User has left the server with user_id : {member.id} and username : {member.display_name}")
-        await assign_server(member, False)
-        infoLogger.info("User status successfully updated")
+        payload = {
+        "data": {
+            "attributes": {"server_guild": guild.id},
+            "type": "servers"
+            }
+        }
+        resp = await send_request(method="POST",endpoint=API_ENDPOINTS["CONNECT_SERVER"], data=payload)
+
+        infoLogger.info(f"Server status successfully updated: {resp}")
     except Exception as e:
-        errorLogger.error(f"Error while updating user status ERROR: {e}")
+        errorLogger.error(f"Error while updating Server status ERROR: {e}")
+# @ client.event
+# async def on_message(message):
+#     # TODO: Get user_details when user .info @user
+#     # TODO: Get group_details when group .info @group
+#     # TODO: Get Scrum_details when .scrum_info @group
+    
+
+# @ client.event
+# async def on_member_join(member):
+#     infoLogger.info(
+#         f"{member.display_name} has joined {member.guild.name} id({member.id})")
+#     try:
+
+       
+
+#         infoLogger.info(f"{member.name} added to DB ")
+#         # Give user Roles
+#         await give_user_roles(member)
+#     except Exception as e:
+#         errorLogger.error(f"Error while updating user status ERROR: {e}")
 
 
-@client.event
-async def on_message(message):
+@ client.event
+async def on_voice_state_update(member, before, after):
+    if before.channel != after.channel and (after.channel and after.channel.name.startswith("SCRUM") or (
+            before.channel and before.channel.name.startswith("SCRUM"))):
+        timestamp = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
 
-    # TODO: Get user_details when user .info @user
-    # TODO: Get group_details when group .info @group
-    # TODO: Get Scrum_details when .scrum_info @group
-    if message.content.startswith("dn-"):
-        await client.process_commands(message)
-    elif message.content.startswith(".info") and message.role_mentions:
-        try:
-            role_name = message.role_mentions[0].name
-            channel = "-".join(
-                str(x).lower() for x in re.sub(" +", " ", re.sub("[^a-zA-Z0-9 \n]", "_", role_name)).split(" ")
-            )
-            if (
-                    message.channel.name == channel + "-channel"
-                    and role_name.endswith("Team")
-                    and role_name.startswith("V2")
-            ):
-                await check_group_details(message, role_name)
-            elif message.channel.name == "bot-commands" and discord.utils.find(
-                    lambda r: r.name == role_name, message.guild.roles
-            ):
-                member_list = []
-                for member in message.guild.members:
-                    if not member.bot and discord.utils.find(lambda r: r.name == role_name, member.roles):
-                        member_list.append(
-                            f"{member.id} ->>>> {member.display_name}")
-                return Embeds.success_embed(
-                    channel=message.channel,
-                    title=f"{role_name} Details",
-                    description="\n".join(_ for _ in member_list),
-                )
-        except Exception as e:
-            errorLogger.error(f"Error on fetching role details: {e}")
-            # return Embeds.error_embed(title="An error occurred while processing the command", channel=message.author)
-    elif message.content.startswith(".info") and (
-            message.channel.name == "ask-a-bot"
-            or message.channel.name == "🐛bug-reports-and-ideas"
-            or message.channel.name.startswith("v2")
-    ):
-        if message.mentions and (
-                discord.utils.find(lambda r: r.name == "admin",
-                                   message.author.roles)
-                or discord.utils.find(lambda r: r.name == "Dn Beta Tester", message.author.roles)
-        ):
-            await check_user_details(message, message.mentions[0].id)
-        elif message.mentions:
-            return Embeds.error_embed(title="You can't get others data", channel=message.channel)
-        else:
-            await check_user_details(message, message.author.id, True)
-    elif message.content.startswith(".scrums") and message.channel.name.startswith("v2") and message.role_mentions and (
-            discord.utils.find(lambda r: r.name == "admin", message.author.roles)
-            or discord.utils.find(lambda r: r.name == "Batch Leader", message.author.roles)
-    ):
-        role_name = message.role_mentions[0].name
-        await check_scrum_details(message.channel, role_name)
-
-
-@client.event
-async def on_member_join(member):
-    infoLogger.info(
-        f"{member.display_name} has joined {member.guild.name} id({member.id})")
-    try:
-        # Register user in to DB
-        await new_member_joined(member)
-        # Assign server
-        await assign_server(member)
-        infoLogger.info(f"{member.name} added to DB ")
-        # Give user Roles
-        await give_user_roles(member)
-    except Exception as e:
-        errorLogger.error(f"Error while updating user status ERROR: {e}")
+        # User joined a voice channel
+        if after.channel and after.channel.name.startswith("SCRUM"):
+            print("attendance (user_id, channel_name, time, status) VALUES (?, ?, ?, ?, 'in')",
+                  # TODO  send this data to backend
+                  (member.id, after.channel.id, timestamp, member.guild.id))
+        # User left a voice channel
+        if before.channel and before.channel.name.startswith("SCRUM"):
+            print(" attendance (user_id, channel_name, time, status) VALUES (?, ?, ?, ?, 'out')",
+                  (member.id, before.channel.id, timestamp, member.guild.id))
 
 
 for filename in os.listdir("./cogs"):
     if filename.endswith(".py"):
         client.load_extension(f"cogs.{filename[:-3]}")
+
+args = sys.argv[1:]
+
+for i in args:
+    if i in ("--sqs"):
+        shoot_sqs(client)
 
 client.run(CONFIG["BOT_TOKEN"])

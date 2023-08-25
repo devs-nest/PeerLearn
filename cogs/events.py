@@ -1,17 +1,10 @@
 # import asyncio
 import json
-import re
-from asyncio import sleep
 
-import aiocron
 import boto3
-import discord
 from discord.ext import commands, tasks
 
 from logger import errorLogger, infoLogger
-from services.user import (
-    check_scrum_details,
-)
 from utils.config import CONFIG
 from utils.groups import create_group, delete_group, update_group
 from utils.notify_user import notify_group
@@ -34,25 +27,6 @@ class Events(commands.Cog):
             self.compile_events.start()
         except RuntimeError:
             print("Task loop is still running.")
-
-    @aiocron.crontab('0 0 * * SAT')
-    async def scrum_data(self):
-        for guild in self.client.guilds:
-            roles = []
-            for role in guild.roles:
-                if role.name.startswith("V2") and role.name.endswith("Team"):
-                    roles.append(role)
-
-            for role in roles:
-                channel_name = "-".join(
-                    str(x).lower() for x in re.sub(" +", " ", re.sub("[^a-zA-Z0-9 \n]", "_", role.name).split(" "))
-                )
-                text_channel = discord.utils.find(
-                    lambda r: r.name == channel_name + "-channel", guild.text_channels
-                )
-                if text_channel:
-                    await sleep(2)
-                    await check_scrum_details(text_channel, role.name)
 
     @tasks.loop(seconds=10, reconnect=True)
     async def compile_events(self):

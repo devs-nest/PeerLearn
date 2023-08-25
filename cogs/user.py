@@ -21,32 +21,6 @@ class User(commands.Cog):
     async def whoami(self, ctx):
         Embeds.info_embed(title="Your discord id:", description=f"`{ctx.author.id}`", channel=ctx.channel)
 
-    @commands.command(help="Connect your discord account to our website")
-    async def connect(self, message):
-        try:
-            response = await send_request(
-                endpoint=API_ENDPOINTS["GET_TOKEN"],
-                data={"data": {"attributes": {"discord_id": str(message.author.id)}}},
-            )
-            bot_token = response["data"]["attributes"]["bot_token"]
-            if bot_token:
-                return Embeds.info_embed(
-                    channel=message.author,
-                    title="Connect discord to website",
-                    description=(
-                        "1. Open our [website](https://devsnest.in) and login\n"
-                        + "2. In profile page click connect with discord button\n"
-                        + f"3. Paste `{bot_token}` as your token"
-                    ),
-                )
-            else:
-                return Embeds.success_embed(
-                    channel=message.author,
-                    title="Already connected to website",
-                )
-        except BadRequest:
-            return Embeds.error_embed(title="An error occurred while processing the command", channel=message.author)
-
 
 def setup(client):
     client.add_cog(User(client))
