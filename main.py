@@ -48,12 +48,12 @@ async def on_ready():
 async def on_guild_join(guild):
     try:
         payload = {
-        "data": {
-            "attributes": {"server_guild": guild.id},
-            "type": "servers"
+            "data": {
+                "attributes": {"server_guild": guild.id},
+                "type": "servers"
             }
         }
-        resp = await send_request(method="POST",endpoint=API_ENDPOINTS["CONNECT_SERVER"], data=payload)
+        resp = await send_request(method="POST", endpoint=API_ENDPOINTS["CONNECT_SERVER"], data=payload)
 
         infoLogger.info(f"Server status successfully updated: {resp}")
     except Exception as e:
@@ -63,7 +63,7 @@ async def on_guild_join(guild):
 #     # TODO: Get user_details when user .info @user
 #     # TODO: Get group_details when group .info @group
 #     # TODO: Get Scrum_details when .scrum_info @group
-    
+
 
 # @ client.event
 # async def on_member_join(member):
@@ -71,7 +71,6 @@ async def on_guild_join(guild):
 #         f"{member.display_name} has joined {member.guild.name} id({member.id})")
 #     try:
 
-       
 
 #         infoLogger.info(f"{member.name} added to DB ")
 #         # Give user Roles
@@ -82,20 +81,38 @@ async def on_guild_join(guild):
 
 @ client.event
 async def on_voice_state_update(member, before, after):
-    if before.channel != after.channel and (after.channel and after.channel.name.startswith("SCRUM") or (
-            before.channel and before.channel.name.startswith("SCRUM"))):
-        timestamp = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+    try:
+        if before.channel != after.channel and (after.channel and after.channel.name.startswith("SCRUM") or (
+                before.channel and before.channel.name.startswith("SCRUM"))):
 
-        # User joined a voice channel
-        if after.channel and after.channel.name.startswith("SCRUM"):
-            print("attendance (user_id, channel_name, time, status) VALUES (?, ?, ?, ?, 'in')",
-                  # TODO  send this data to backend
-                  (member.id, after.channel.id, timestamp, member.guild.id))
-        # User left a voice channel
-        if before.channel and before.channel.name.startswith("SCRUM"):
-            print(" attendance (user_id, channel_name, time, status) VALUES (?, ?, ?, ?, 'out')",
-                  (member.id, before.channel.id, timestamp, member.guild.id))
+            if after.channel and after.channel.name.startswith("SCRUM"):
+                group_name = after.channel.name
+                entry_status = "in"
+                scrum_channel = after.channel
+            # User left a voice channel
+            if before.channel and before.channel.name.startswith("SCRUM"):
+                group_name = before.channel.name
+                entry_status = "out"
+                scrum_channel = before.channel
 
+            payload = {
+                "data": {
+                    "attributes": {
+                        "discord_id": member.id,
+                        "server_guild": scrum_channel.guild.id,
+                        "scrum_channel": scrum_channel.id,
+                        "group_name": group_name.replace("SCRUM ", ""),
+                        "entry_status": entry_status
+                    },
+                    "type": "groups"
+                }
+            }
+            infoLogger.info(payload)
+            resp = await send_request(method="POST", endpoint=API_ENDPOINTS["UPDATE_ATTENDANCE"], data=payload)
+            infoLogger.info(resp)
+
+    except Exception as e:
+        errorLogger.error(f"Error while updating user attendance ERROR: {e}")
 
 for filename in os.listdir("./cogs"):
     if filename.endswith(".py"):

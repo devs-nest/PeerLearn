@@ -6,7 +6,7 @@ from discord.ext import commands, tasks
 
 from logger import errorLogger, infoLogger
 from utils.config import CONFIG
-from utils.groups import create_group, delete_group, update_group
+from utils.groups import create_group, delete_group, update_group, start_scrum
 from utils.notify_user import notify_group
 from utils.role_modifier import assign_mass_role, assign_role, take_mass_role, take_role
 
@@ -36,9 +36,11 @@ class Events(commands.Cog):
             # Let the queue know that the message is process
             data = message.body
             data = json.loads(data)
-            infoLogger.info("_________________________________________________________________________________")
+            infoLogger.info(
+                "_________________________________________________________________________________")
             infoLogger.info("data: {}".format(data))
-            queue.delete_messages(Entries=[{"Id": message.message_id, "ReceiptHandle": message.receipt_handle}])
+            queue.delete_messages(
+                Entries=[{"Id": message.message_id, "ReceiptHandle": message.receipt_handle}])
             try:
                 function = print
                 if data["type"] == "role_modifier":
@@ -57,6 +59,8 @@ class Events(commands.Cog):
                         function = delete_group
                     elif data["payload"]["action"] == "update":
                         function = update_group
+                    elif data["payload"]["action"] == "start-scrum":
+                        function = start_scrum
                 elif data["type"] == "group_notifier":
                     function = notify_group
 
