@@ -4,6 +4,6 @@ phases:
   build:
     commands:
       - ls
-      - docker build -t devsnest20/peer_droid .
+      - docker build -t devsnest20/peerdroid .
       - docker login --username=${username} --password=${password}
-      - docker push devsnest20/peer_droid 
+      - docker push devsnest20/peerdroid 
