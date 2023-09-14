@@ -4,23 +4,6 @@ from logger import errorLogger, infoLogger
 from utils.config import CONFIG
 
 
-async def verify_user(data, client):
-    """
-    verify a discord user
-    Args:
-     - data, client
-    """
-    try:
-        guild = await client.fetch_guild(int(CONFIG["DEVSNEST_GUILD_ID"]))
-        member = await guild.fetch_member(data["payload"]["discord_id"])
-        role = guild.get_role(int(CONFIG["VERIFICATION_ROLE"]))
-        infoLogger.info(f" verified: {member.name}")
-        await member.add_roles(role)  # this
-    except (Exception) as e:
-        errorLogger.error(
-            f' error on verification:{data["payload"]["discord_id"]} error:  {e}')
-
-
 async def assign_role(data, guild):
     try:
         role_name = "PL " + data["payload"]["role_name"]

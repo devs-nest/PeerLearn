@@ -36,7 +36,7 @@ async def notify_user(data, client):
 async def notify_group(data, guild):
     try:
 
-        role_name = data["payload"]["group_name"]
+        role_name = "PL " + data["payload"]["group_name"]
         team_role = discord.utils.find(lambda r: r.name == role_name, guild.roles)
         if not team_role:
             errorLogger.error(f" No Role present {role_name}")

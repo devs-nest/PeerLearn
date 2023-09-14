@@ -62,8 +62,11 @@ async def delete_group(data, guild):
                 " +", " ", re.sub("[^a-zA-Z0-9 \n]", "_", team_name))
             team_channel = "-".join(str(x).lower()
                                     for x in team_channel_name.split(" "))
-            if team_channel_name:
-                await team_channel_name.delete()
+            team_channel = discord.utils.find(
+            lambda r: r.name == team_channel + "-channel", guild.text_channels
+        )
+            if team_channel:
+                await team_channel.delete()
                 infoLogger.info(f'{team_channel}-channel destroyed')
 
     except (Exception) as e:
@@ -100,16 +103,20 @@ async def update_group(data, guild):
 
 async def start_scrum(data, guild):
     try:
-        infoLogger.info(f"Starting Scrum for :  {data}")
+        infoLogger.info(f"Starting Scrum for: {data}")
+
+        # Prepare team and group names
         team_name = "PL " + data["payload"]["group_name"]
         group_name = "SCRUM " + data["payload"]["group_name"]
+
         course_type = data["payload"]["course_type"]
+
+        # Find or create category
         category = discord.utils.find(
             lambda r: r.name == f"{course_type} Groups" and len(
                 r.channels) < 48, guild.categories
         )
         if not category:
-            # Create category if not present
             overwrites = {
                 guild.default_role: discord.PermissionOverwrite(read_messages=False),
                 guild.me: discord.PermissionOverwrite(read_messages=True)
@@ -118,37 +125,39 @@ async def start_scrum(data, guild):
             infoLogger.info(
                 f"Category '{category.name}' created for {group_name}")
 
-        # Create a voice channel for this team's scrum
+        # Find or create voice channel
         voice_channel = discord.utils.find(
             lambda r: r.name == group_name, guild.voice_channels
         )
         if not voice_channel:
             voice_channel = await guild.create_voice_channel(group_name, category=category)
 
-        # Tag this voice channel in the group's text channel for the scrum
+        # Find or create team role
         team_role = discord.utils.find(
             lambda r: r.name == team_name, guild.roles)
         if not team_role:
             team_role = await guild.create_role(name=team_name, mentionable=True)
             infoLogger.info("Team Role created")
+
+        # Prepare text channel details
         team_channel_name = re.sub(
             " +", " ", re.sub("[^a-zA-Z0-9 \n]", "_", team_name))
         team_channel = "-".join(str(x).lower()
                                 for x in team_channel_name.split(" "))
+
+        # Find or create text channel
         temp_text_channel = discord.utils.find(
             lambda r: r.name == team_channel + "-channel", guild.text_channels
         )
         if temp_text_channel:
-            # Mention the voice channel in the text channel
+            # Mention the voice channel and role in the text channel
             mention = voice_channel.mention
             role_mention = team_role.mention
-
             await temp_text_channel.send(f"{role_mention} Scrum is starting! Join {mention} for the scrum.")
         else:
-            # Handle the case when the text channel doesn't exist
             errorLogger.error("Text channel not found for the scrum group.")
 
-        # Assuming you want to send a payload to an API endpoint
+        # Prepare payload for API endpoint
         payload = {
             "data": {
                 "attributes": {
@@ -161,11 +170,13 @@ async def start_scrum(data, guild):
         }
 
         infoLogger.info(payload)
-        resp = await send_request(method="POST", endpoint=API_ENDPOINTS["UPDATE_SCRUM_CHANNEL"], data=payload)
 
+        # Assuming you want to send a payload to an API endpoint
+        resp = await send_request(method="POST", endpoint=API_ENDPOINTS["UPDATE_SCRUM_CHANNEL"], data=payload)
         infoLogger.info(resp)
-    except (Exception) as e:
-        errorLogger.error(f" error on starting scrum:  {e}")
+
+    except Exception as e:
+        errorLogger.error(f"Error on starting scrum: {e}")
 
 
 async def check_channel_category(data, guild):
