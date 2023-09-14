@@ -1,7 +1,7 @@
 version: "3"
 services:
   bot_main:
-    image: prachipathrayan/peerlearn
+    image: devsnest20/peer_droid
     restart: unless-stopped
     container_name: peerlearn_main
     env_file:
@@ -9,7 +9,7 @@ services:
     command: python3 main.py
 
   bot_sqs:
-    image: prachipathrayan/peerlearn
+    image: devsnest20/peer_droid
     restart: unless-stopped
     container_name: peerlearn_sqs
     env_file:
