@@ -12,18 +12,18 @@ async def assign_role(data, guild):
         if role:
             if discord.utils.find(lambda r: r.name == role_name, member.roles):
                 infoLogger.info(
-                    f" {member.name} already has the role ->>>  {data['payload']['role_name']}")
+                    f" {member.name} already has the role ->>>  {role_name}")
             else:
                 await member.add_roles(role)
                 infoLogger.info(
-                    f" Added role {data['payload']['role_name']} to -> {member.name}")
+                    f" Added role {role_name} to -> {member.name}")
         else:
             errorLogger.error(
-                f" No Role present {data['payload']['role_name']}")
+                f" No Role present {role_name}")
 
     except (Exception) as e:
         errorLogger.error(
-            f' error on assign_role:{data["payload"]["discord_id"]} error:  {e}')
+            f' error on assign_role:{role_name} error:  {e}')
 
 
 async def take_role(data, guild):
