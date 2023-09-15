@@ -39,4 +39,4 @@ typing-extensions==3.7.4.3
 urllib3==1.25.8
 webencodings==0.5.1
 Werkzeug==2.0.1
-yarl==1.6.3d
+yarl==1.6.3
